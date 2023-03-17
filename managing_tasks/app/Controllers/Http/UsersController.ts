@@ -1,61 +1,162 @@
 import CreateUserValidator from "App/Validators/CreateUserValidator";
 import User from "App/Models/User";
-
+import Application from "@ioc:Adonis/Core/Application";
+import Drive from '@ioc:Adonis/Core/Drive'
 
 export default class UsersController {
 
-  public async getAllUsers() {
 
-    const users = await User.all()
-    return {
-      status: 'success',
-      users
-    };
-  }
-
-  public async getUser({params}) {
-
-    const user = await User.find(params.id)
-
-    return {
-      status: 'success',
-      user
-    };
+  public async downloadUserFile({params, response}) {
+    const location = `${params.filename}`
+    console.log(location)
+    response.stream(await Drive.getStream(location))
   }
 
 
-  public async createUser({request}) {
 
-    const payload = await request.validate(CreateUserValidator)
+  public async uploadUserFile({request, params, response}) {
+    const file = request.file('file', {
+      size: '5mb',
+      extnames: ['jpg', 'png', 'gif'],
+    })
 
-    const user = await User.create(payload)
+    if (file && file.isValid) {
+      await file.move(Application.tmpPath('uploads'))
 
-    return {
-      status: 'success',
-      user
-    };
+      await User
+        .query()
+        .where('id', params.id)
+        .update({photo: file.fileName})
+
+      response.status(200).json({
+        status: 'success'
+      })
+    } else {
+      response.status(404).json({
+        status: 'fail',
+        message: 'file not found or is not valid.'
+      })
+    }
+
   }
 
-  public async deleteUser({params}) {
-    const user = await User.find(params.id)
-    if (user) await user.delete()
 
-    return {
-      status: 'success'
-    };
+  public async getAllUsers({request, auth, response}) {
+
+    const page = request.all().page || 1
+
+
+    try {
+      await auth.use('jwt').authenticate()
+
+      if (auth.use("jwt").user.role === 'admin') {
+        const users = await User.query().paginate(page, 5)
+
+
+        response.status(200).json({
+          status: 'success',
+          users
+        })
+      } else
+        throw 'you are not admin!'
+
+
+    } catch (err) {
+      response.status(404).json({
+        status: 'fail',
+        message: err
+      })
+    }
   }
 
-  public async updateUser({params, request}) {
+  public async getUser({params, response, auth}) {
 
-    const payload = await request.validate(CreateUserValidator)
+    try {
+      await auth.use('jwt').authenticate()
 
-    await User
-      .query()
-      .where('id', params.id)
-      .update({...payload})
+      if (auth.use("jwt").user.role === 'admin') {
+        const user = await User.find(params.id)
 
-    return {
-      status: 'success'
-    };
+        response.status(200).json({
+          status: 'success',
+          user
+        })
+      } else
+        throw 'you are not admin!'
+
+    } catch (err) {
+      return response.status(404).json({
+        status: 'fail',
+        message: err
+      })
+    }
+  }
+
+
+  // public async createUser({request}) {
+  //
+  //   const payload = await request.validate(CreateUserValidator)
+  //
+  //   const user = await User.create(payload)
+  //
+  //   return {
+  //     status: 'success',
+  //     user
+  //   };
+  // }
+
+  public async deleteUser({params, response, auth}) {
+
+
+    try {
+      await auth.use('jwt').authenticate()
+
+      if (auth.use("jwt").user.role === 'admin') {
+        const user = await User.find(params.id)
+        if (!user) throw 'user not find!'
+
+        await user.delete()
+        response.status(200).json({
+          status: 'success',
+          user
+        })
+      } else
+        throw 'you are not admin!'
+    } catch (err) {
+      return response.status(404).json({
+        status: 'fail',
+        message: err
+      })
+    }
+  }
+
+  public async updateUser({params, request, response, auth}) {
+
+    try {
+      await auth.use('jwt').authenticate()
+
+
+      if (auth.use("jwt").user.role === 'admin') {
+
+        const payload = await request.validate(CreateUserValidator)
+
+        await User
+          .query()
+          .where('id', params.id)
+          .update({...payload})
+
+        response.status(200).json({
+          status: 'success',
+        })
+      } else
+        throw 'you are not admin!'
+
+
+    } catch (err) {
+      return response.status(404).json({
+        status: 'fail',
+        message: err
+      })
+    }
   }
 }
