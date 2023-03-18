@@ -5,7 +5,7 @@
  * file.
  */
 
-import type { AuthConfig } from '@ioc:Adonis/Addons/Auth'
+import type {AuthConfig} from '@ioc:Adonis/Addons/Auth';
 import Env from "@ioc:Adonis/Core/Env";
 
 /*
@@ -120,11 +120,11 @@ const authConfig: AuthConfig = {
       provider: {
         driver: "lucid",
         identifierKey: "id",
-        uids: [],
+        uids: ['email', 'password'],
         model: () => import('App/Models/User')
       }
     },
   },
-}
+};
 
-export default authConfig
+export default authConfig;
