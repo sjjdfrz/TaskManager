@@ -4,6 +4,7 @@ export default class extends BaseSchema {
   protected tableName = 'tasks';
 
   public async up() {
+    // create tasks table in db_schema
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id');
       table.string('name');
@@ -13,7 +14,7 @@ export default class extends BaseSchema {
       table.datetime('updated_at', {useTz: true});
     });
   }
-
+  // drop tasks table
   public async down() {
     this.schema.dropTable(this.tableName);
   }

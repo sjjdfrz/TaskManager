@@ -2,7 +2,15 @@ import {DateTime} from 'luxon';
 import Hash from '@ioc:Adonis/Core/Hash';
 import {column, BaseModel, beforeSave} from '@ioc:Adonis/Lucid/Orm';
 
+enum Roles{
+  user='user',
+  admin='admin'
+}
+
 export default class User extends BaseModel {
+
+
+
   @column({isPrimary: true})
   public id: number;
 
@@ -25,7 +33,7 @@ export default class User extends BaseModel {
   public updatedAt: DateTime;
 
   @column()
-  public role: ['user', 'admin'];
+  public role: Roles;
 
   @column()
   public photo: string;

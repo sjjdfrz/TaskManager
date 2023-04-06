@@ -1,140 +1,197 @@
 import User from "App/Models/User";
 import Application from "@ioc:Adonis/Core/Application";
 import Drive from '@ioc:Adonis/Core/Drive';
-import {HttpException} from "@adonisjs/http-server/build/src/Exceptions/HttpException";
 import Hash from "@ioc:Adonis/Core/Hash";
+import {rules, schema} from "@ioc:Adonis/Core/Validator";
 
 export default class UsersController {
 
-  public async downloadUserFile({params, response, auth}) {
-
-    await auth.use('jwt').authenticate();
-
-    const user = await User.findOrFail(params.id)
-    const location = user.photo;
-    console.log(location);
-
-    response.stream(await Drive.getStream(`users/${location}`));
-
+  // send success responses to client
+  public sendResponse(response, status, statusCode, message, data?: object) {
+    response.status(statusCode).json({
+      status,
+      statusCode,
+      message,
+      data,
+    });
   }
 
 
-  public async uploadUserFile({request, params, response, auth}) {
+  public validateFile(request, response) {
 
-    await auth.use('jwt').authenticate();
-
+    // validation file
     const file = request.file('file', {
-      size: '10mb',
-      extnames: ['jpg', 'png', 'gif'],
-    })
+      size: '10mb'
+    });
 
+    // if there is no file
     if (!file) {
-      return response.status(404).json({
-        status: 'fail',
-        message: 'file is not found!'
-      });
+
+      this.sendResponse(
+        response,
+        'fail',
+        404,
+        'File is not found!',
+      );
     }
 
+    // validation of file failed
     if (!file.isValid) {
-      return response.status(415).json({
-        status: 'fail',
-        message: 'file is not valid!'
-      });
+
+      this.sendResponse(
+        response,
+        'fail',
+        415,
+        'File is not valid!',
+      );
     }
+    return file;
+  }
 
-    await file.move(Application.tmpPath('uploads/users'))
 
+  public async validateUpdatedUser(request) {
+
+    // validation
+    const updateSchema = schema.create({
+
+      name: schema.string.optional([
+        rules.alpha(),
+        rules.trim(),
+        rules.escape()
+      ]),
+
+      email: schema.string.optional({}, [rules.email(), rules.unique({table: 'users', column: 'email'})]),
+
+      password: schema.string.optional({}, [rules.minLength(8)])
+    });
+
+    await request.validate({schema: updateSchema});
+
+    if (request.all().password)
+      request.all().password = await Hash.make(request.all().password);
+  }
+
+
+  // download user file by its ID
+  public async downloadUserFile({params, response}) {
+
+    // find user from database by ID
+    const user = await User.findOrFail(params.id);
+
+    // the photo property of each user is the name of file(photo)
+    const location = user.photo;
+
+    // streaming file
+    response.stream(await Drive.getStream(`users/${location}`));
+  }
+
+
+  public async uploadUserFile({request, params, response}) {
+
+    const file = this.validateFile(request, response);
+
+    // store file to tmp/uploads/users folder
+    await file.move(Application.tmpPath('uploads/users'));
+
+    // save the name of file in database
     await User
       .query()
       .where('id', params.id)
       .update({photo: file.fileName});
 
-    return response.status(200).json({
-      status: 'success'
-    });
+    this.sendResponse(
+      response,
+      'success',
+      200,
+      'File uploaded successfully.',
+      file
+    );
   }
 
 
-  public async getAllUsers({request, auth, response}) {
+  public async getAllUsers({request, response}) {
 
-    await auth.use('jwt').authenticate();
+    /*
+     this function is for send back all users.
+     also we can paginate, sort and search users.
+     the sorting is default by "created_at" property
+     and searching can be done only by "name" property.
+    */
 
     const page = request.all().page || 1;
     const sortBy = request.all().sort || 'created_at';
     const searchByName = request.all().name || '';
 
-    if (auth.use("jwt").user.role === 'admin') {
+    let users;
 
-      let users;
-
-      if (searchByName) {
-        users = await User
-          .query()
-          .where('name', searchByName)
-          .orderBy(sortBy)
-          .paginate(page, 5);
-      } else {
-        users = await User
-          .query()
-          .orderBy(sortBy)
-          .paginate(page, 5);
-      }
-      response.status(200).json({
-        status: 'success',
-        users
-      });
-    } else throw new HttpException('you are not admin!', 403);
-  }
-
-
-  public async getUser({params, response, auth}) {
-
-    await auth.use('jwt').authenticate();
-
-    if (auth.use("jwt").user.role === 'admin') {
-      const user = await User.findOrFail(params.id);
-
-      response.status(200).json({
-        status: 'success',
-        user
-      });
-    } else throw new HttpException('you are not admin!', 403);
-  }
-
-
-  public async deleteUser({params, response, auth}) {
-
-    await auth.use('jwt').authenticate();
-
-    if (auth.use("jwt").user.role === 'admin') {
-
-      const user = await User.findOrFail(params.id);
-      await user.delete();
-
-      response.status(200).json({
-        status: 'success'
-      });
-    } else throw new HttpException('you are not admin!', 403);
-  }
-
-
-  public async updateUser({params, request, response, auth}) {
-
-    await auth.use('jwt').authenticate();
-
-    if (auth.use("jwt").user.role === 'admin') {
-
-      if (request.all().password)
-        request.all().password = await Hash.make(request.all().password);
-
-      await User
+    if (searchByName) {
+      users = await User
         .query()
-        .where('id', params.id)
-        .update({...request.all()});
+        .where('name', searchByName)
+        .orderBy(sortBy)
+        .paginate(page, 5);
+    } else {
+      users = await User
+        .query()
+        .orderBy(sortBy)
+        .paginate(page, 5);
+    }
 
-      response.status(200).json({
-        status: 'success',
-      });
-    } else throw new HttpException('you are not admin!', 403);
+    this.sendResponse(
+      response,
+      'success',
+      200,
+      'Sending list of all users to client successfully.',
+      users
+    );
+  }
+
+
+  // send back user by id to client
+  public async getUser({params, response}) {
+
+    const user = await User.findOrFail(params.id);
+
+    this.sendResponse(
+      response,
+      'success',
+      200,
+      'Sending the user to client successfully.',
+      user
+    );
+  }
+
+
+  // delete specific user by ID
+  public async deleteUser({params, response}) {
+
+    const user = await User.findOrFail(params.id);
+    await user.delete();
+
+    this.sendResponse(
+      response,
+      'success',
+      202,
+      'Deleting the user successfully.'
+    );
+  }
+
+
+  // update name,email,password of specific user by id
+  public async updateUser({params, request, response}) {
+
+    await this.validateUpdatedUser(request);
+
+    await User
+      .query()
+      .where('id', params.id)
+      .update({...request.all()});
+
+    this.sendResponse(
+      response,
+      'success',
+      200,
+      'Updating the user successfully.'
+    );
   }
 }

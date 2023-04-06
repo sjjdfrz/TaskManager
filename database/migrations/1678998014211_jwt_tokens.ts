@@ -4,6 +4,8 @@ export default class JwtTokens extends BaseSchema {
   protected tableName = 'jwt_tokens';
 
   public async up() {
+
+    // create table in db_schema for storing jwt tokens
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id').primary();
       table.integer('user_id').unsigned().references('id').inTable('').onDelete('CASCADE');
