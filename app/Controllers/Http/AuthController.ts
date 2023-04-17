@@ -4,18 +4,26 @@ import {rules, schema} from "@ioc:Adonis/Core/Validator";
 
 export default class AuthController {
 
-  // send success responses to client
-  public sendResponse(response, status, statusCode, message, data?: object) {
-    response.status(statusCode).json({
-      status,
-      statusCode,
-      message,
-      data,
+  // register new users
+  public async signup({request, auth, response}) {
+
+    // validation request.body
+    const payload = await request.validate(CreateUserValidator);
+
+    const user = await User.create(payload);
+
+    let accessToken = await auth.use("jwt").generate(user);
+
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'User registered successfully',
+      data: {user, accessToken},
     });
   }
 
 
-  public async loginValidation(request) {
+  public async login({auth, request, response}) {
 
     // validation request.body
     const loginSchema = schema.create({
@@ -29,42 +37,18 @@ export default class AuthController {
     });
 
     await request.validate({schema: loginSchema});
-  }
-
-  // register new users
-  public async signup({request, auth, response}) {
-
-    // validation request.body
-    const payload = await request.validate(CreateUserValidator);
-
-    const user = await User.create(payload);
-
-    let accessToken = await auth.use("jwt").generate(user);
-
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'User registered successfully',
-      {user, accessToken});
-  }
-
-
-  public async login({auth, request, response}) {
-
-    await this.loginValidation(request);
 
     const email = request.input('email');
     const password = request.input('password');
 
     const accessToken = await auth.use('jwt').attempt(email, password);
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'User logged in successfully',
-      {user: auth.use("jwt").user, accessToken});
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'User logged in successfully',
+      data: {user: auth.use("jwt").user, accessToken},
+    });
   }
 
 
@@ -72,11 +56,10 @@ export default class AuthController {
 
     await auth.use('jwt').revoke();
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'User logged in successfully'
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'User logged out successfully',
+    });
   }
 }

@@ -6,72 +6,6 @@ import {rules, schema} from "@ioc:Adonis/Core/Validator";
 
 export default class UsersController {
 
-  // send success responses to client
-  public sendResponse(response, status, statusCode, message, data?: object) {
-    response.status(statusCode).json({
-      status,
-      statusCode,
-      message,
-      data,
-    });
-  }
-
-
-  public validateFile(request, response) {
-
-    // validation file
-    const file = request.file('file', {
-      size: '10mb'
-    });
-
-    // if there is no file
-    if (!file) {
-
-      this.sendResponse(
-        response,
-        'fail',
-        404,
-        'File is not found!',
-      );
-    }
-
-    // validation of file failed
-    if (!file.isValid) {
-
-      this.sendResponse(
-        response,
-        'fail',
-        415,
-        'File is not valid!',
-      );
-    }
-    return file;
-  }
-
-
-  public async validateUpdatedUser(request) {
-
-    // validation
-    const updateSchema = schema.create({
-
-      name: schema.string.optional([
-        rules.alpha(),
-        rules.trim(),
-        rules.escape()
-      ]),
-
-      email: schema.string.optional({}, [rules.email(), rules.unique({table: 'users', column: 'email'})]),
-
-      password: schema.string.optional({}, [rules.minLength(8)])
-    });
-
-    await request.validate({schema: updateSchema});
-
-    if (request.all().password)
-      request.all().password = await Hash.make(request.all().password);
-  }
-
-
   // download user file by its ID
   public async downloadUserFile({params, response}) {
 
@@ -88,7 +22,30 @@ export default class UsersController {
 
   public async uploadUserFile({request, params, response}) {
 
-    const file = this.validateFile(request, response);
+    // validation file
+    const file = request.file('file', {
+      size: '10mb'
+    });
+
+    // if there is no file
+    if (!file) {
+
+      response.status(404).json({
+        status: 'fail',
+        statusCode: 404,
+        message: 'File is not found!'
+      });
+    }
+
+    // validation of file failed
+    if (!file.isValid) {
+
+      response.status(415).json({
+        status: 'fail',
+        statusCode: 415,
+        message: 'File is not valid!'
+      });
+    }
 
     // store file to tmp/uploads/users folder
     await file.move(Application.tmpPath('uploads/users'));
@@ -99,13 +56,12 @@ export default class UsersController {
       .where('id', params.id)
       .update({photo: file.fileName});
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'File uploaded successfully.',
-      file
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'File uploaded successfully.',
+      data: file,
+    });
   }
 
 
@@ -137,13 +93,12 @@ export default class UsersController {
         .paginate(page, 5);
     }
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'Sending list of all users to client successfully.',
-      users
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Sending list of all users to client successfully.',
+      data: users,
+    });
   }
 
 
@@ -152,13 +107,12 @@ export default class UsersController {
 
     const user = await User.findOrFail(params.id);
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'Sending the user to client successfully.',
-      user
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Sending the user to client successfully.',
+      data: user
+    });
   }
 
 
@@ -168,30 +122,45 @@ export default class UsersController {
     const user = await User.findOrFail(params.id);
     await user.delete();
 
-    this.sendResponse(
-      response,
-      'success',
-      202,
-      'Deleting the user successfully.'
-    );
+    response.status(202).json({
+      status: 'success',
+      statusCode: 202,
+      message: 'Deleting the user successfully.',
+    });
   }
 
 
   // update name,email,password of specific user by id
   public async updateUser({params, request, response}) {
 
-    await this.validateUpdatedUser(request);
+    // validation
+    const updateSchema = schema.create({
+
+      name: schema.string.optional([
+        rules.alpha(),
+        rules.trim(),
+        rules.escape()
+      ]),
+
+      email: schema.string.optional({}, [rules.email(), rules.unique({table: 'users', column: 'email'})]),
+
+      password: schema.string.optional({}, [rules.minLength(8)])
+    });
+
+    await request.validate({schema: updateSchema});
+
+    if (request.all().password)
+      request.all().password = await Hash.make(request.all().password);
 
     await User
       .query()
       .where('id', params.id)
       .update({...request.all()});
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'Updating the user successfully.'
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Updating the user successfully.',
+    });
   }
 }

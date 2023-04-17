@@ -6,67 +6,6 @@ import {rules, schema} from "@ioc:Adonis/Core/Validator";
 
 export default class TasksController {
 
-  // send success responses to client
-  public sendResponse(response, status, statusCode, message, data?: object) {
-    response.status(statusCode).json({
-      status,
-      statusCode,
-      message,
-      data,
-    });
-  }
-
-
-  public validateFile(request, response) {
-
-    // validation file
-    const file = request.file('file', {
-      size: '100mb'
-    });
-
-    // if there is no file
-    if (!file) {
-
-      this.sendResponse(
-        response,
-        'fail',
-        404,
-        'File is not found!',
-      );
-    }
-
-    // validation of file failed
-    if (!file.isValid) {
-
-      this.sendResponse(
-        response,
-        'fail',
-        415,
-        'File is not valid!',
-      );
-    }
-    return file;
-  }
-
-
-  public async validateUpdatedTask(request) {
-
-    // validation
-    const updateSchema = schema.create({
-
-      name: schema.string.optional([
-        rules.alpha(),
-        rules.trim(),
-        rules.escape()
-      ]),
-
-      priority: schema.enum(['high', 'medium', 'low'] as const)
-    });
-
-    await request.validate({schema: updateSchema});
-  }
-
-
   // download task file by its ID
   public async downloadTaskFile({params, response}) {
 
@@ -83,7 +22,30 @@ export default class TasksController {
 
   public async uploadTaskFile({request, params, response}) {
 
-    const file = this.validateFile(request, response);
+    // validation file
+    const file = request.file('file', {
+      size: '100mb'
+    });
+
+    // if there is no file
+    if (!file) {
+
+      response.status(404).json({
+        status: 'fail',
+        statusCode: 404,
+        message: 'File is not found!',
+      });
+    }
+
+    // validation of file failed
+    if (!file.isValid) {
+
+      response.status(415).json({
+        status: 'fail',
+        statusCode: 415,
+        message: 'File is not valid!'
+      });
+    }
 
     // store file to tmp/uploads/tasks folder
     await file.move(Application.tmpPath('uploads/tasks'));
@@ -94,13 +56,12 @@ export default class TasksController {
       .where('id', params.id)
       .update({photo: file.fileName});
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'File uploaded successfully.',
-      file
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'File uploaded successfully.',
+      data: file,
+    });
   }
 
 
@@ -132,13 +93,12 @@ export default class TasksController {
         .paginate(page, 5);
     }
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'Sending list of all tasks to client successfully.',
-      tasks
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Sending list of all tasks to client successfully.',
+      data: tasks,
+    });
   }
 
 
@@ -147,13 +107,12 @@ export default class TasksController {
 
     const task = await Task.findOrFail(params.id);
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'Sending the task to client successfully.',
-      task
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Sending the task to client successfully.',
+      data: task
+    });
   }
 
 
@@ -165,13 +124,12 @@ export default class TasksController {
 
     const task = await Task.create(payload);
 
-    this.sendResponse(
-      response,
-      'success',
-      201,
-      'Create new task successfully.',
-      task
-    );
+    response.status(201).json({
+      status: 'success',
+      statusCode: 201,
+      message: 'Create new task successfully.',
+      data: task,
+    });
   }
 
 
@@ -181,30 +139,40 @@ export default class TasksController {
     const task = await Task.findOrFail(params.id);
     await task.delete();
 
-    this.sendResponse(
-      response,
-      'success',
-      202,
-      'Deleting the task successfully.'
-    );
+    response.status(202).json({
+      status: 'success',
+      statusCode: 202,
+      message: 'Deleting the task successfully.',
+    });
   }
 
 
   // update name,priority of specific task by ID
   public async updateTask({params, request, response}) {
 
-    await this.validateUpdatedTask(request);
+    // validation
+    const updateSchema = schema.create({
+
+      name: schema.string.optional([
+        rules.alpha(),
+        rules.trim(),
+        rules.escape()
+      ]),
+
+      priority: schema.enum(['high', 'medium', 'low'] as const)
+    });
+
+    await request.validate({schema: updateSchema});
 
     await Task
       .query()
       .where('id', params.id)
       .update({...request.all()});
 
-    this.sendResponse(
-      response,
-      'success',
-      200,
-      'Updating the task successfully.'
-    );
+    response.status(200).json({
+      status: 'success',
+      statusCode: 200,
+      message: 'Updating the task successfully.',
+    });
   }
 }
