@@ -49,15 +49,17 @@ MYSQL_USER=
 MYSQL_PASSWORD=
 MYSQL_DB_NAME=
 ```
-5) Run this command to create tables in your mysql schema.
-```
-node ace migration:run
-```
+
 
 ### install
 Run this command to install dependencies:
 ```
 npm install
+```
+
+Run this command to create tables in your mysql schema.
+```
+node ace migration:run
 ```
 
 ### Usage
