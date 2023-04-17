@@ -57,12 +57,15 @@ Run this command to install dependencies:
 npm install
 ```
 
+
+
+### Usage
+
 Run this command to create tables in your mysql schema.
 ```
 node ace migration:run
 ```
 
-### Usage
 To run the server, execute this command:
 ```
 node ace serve --watch
