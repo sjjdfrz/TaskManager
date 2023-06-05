@@ -1,10 +1,10 @@
-![Managing Tasks Project](https://snacknation.com/wp-content/uploads/2020/12/Best-Task-Management-Software-Platforms.png)
+![Task Manager Project](https://snacknation.com/wp-content/uploads/2020/12/Best-Task-Management-Software-Platforms.png)
 
-<h3 align="center"><b>Managing Tasks Project</b></h3>
+<h3 align="center"><b>Task Manager Project</b></h3>
 
 # 📖 Managing Tasks
 
-This is a small project about building api for managing tasks and users.
+This project IS about building api for managing tasks and users.
 
 ## 🛠 Built With
 
@@ -51,7 +51,7 @@ MYSQL_DB_NAME=
 ```
 
 
-### install
+### Install
 Run this command to install dependencies:
 ```
 npm install
