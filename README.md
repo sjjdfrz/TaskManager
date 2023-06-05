@@ -4,7 +4,7 @@
 
 # 📖 Managing Tasks
 
-This project IS about building api for managing tasks and users.
+This project is about building api for managing tasks and users.
 
 ## 🛠 Built With
 
