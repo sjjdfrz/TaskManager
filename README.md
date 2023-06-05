@@ -2,7 +2,7 @@
 
 <h3 align="center"><b>Task Manager Project</b></h3>
 
-# 📖 Managing Tasks
+# 📖 Task Manager
 
 This project is about building api for managing tasks and users.
 
